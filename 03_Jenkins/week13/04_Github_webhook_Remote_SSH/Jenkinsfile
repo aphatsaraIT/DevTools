@@ -3,12 +3,59 @@ pipeline {
 
     environment {
         // It's good practice to keep sensitive or specific data like Docker images, remote hosts, and credentials out of the script for security and flexibility.
-        DOCKER_IMAGE    = 'tuchsanai/fastapi-webhook:latest' // Ensure this Docker image name is correct and accessible.
-        REMOTE_HOST     = 'tuchsanai@34.124.197.62' // Replace with your actual username and remote IP.
-        SSH_CREDENTIALS = 'ssh_prod_instance' // Use the ID of the Jenkins stored SSH credentials.
+        DOCKER_IMAGE    = '63070188/fastapi-webhook:latest' // Ensure this Docker image name is correct and accessible.
+        REMOTE_HOST     = 'g63070188@34.124.129.193' // Replace with your actual username and remote IP.
+        DOCKER_CREDENTIALS = credentials('dockerhub')
+        SSH_CREDENTIALS = 'ssh-instance2' // Use the ID of the Jenkins stored SSH credentials.
     }
 
     stages {
+        stage('Start Jenkins') {
+            steps {
+                // Checkout your source code from version control
+             
+                    sh 'echo Start Jenkins............'
+                    sh 'echo docker : user = $DOCKER_CREDENTIALS_USR : password = $DOCKER_CREDENTIALS_PSW'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                    // Build the Docker image
+                    
+                    dir('./03_Jenkins/week13/04_Github_webhook_Remote_SSH') {
+                       sh 'echo "Running in $(pwd)"'
+                       sh 'echo start build the Docker image = $DOCKER_IMAGE'
+                       sh 'docker build -t $DOCKER_IMAGE .'
+                    }   
+                  
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    
+                    // Login to Docker Hub
+                    sh 'echo $DOCKER_CREDENTIALS_PSW | docker login --username $DOCKER_CREDENTIALS_USR --password-stdin'
+                    // Push the image
+                    sh 'docker push $DOCKER_IMAGE'
+                }
+            }
+        }
+
+        stage('Clear Docker Components') {
+            steps {
+                script {
+                    // Remove Docker images and containers
+                    sh 'docker stop $(docker ps -a -q)'  
+                    sh  'docker rm $(docker ps -a -q)' 
+                    sh  'docker rmi $(docker images -q)'
+                    sh 'docker system prune -af'
+                }
+            }
+        }
+        
         stage('Login to Docker Hub') {
             steps {
                 // This step logs into Docker Hub using credentials stored in Jenkins.
@@ -31,6 +78,13 @@ pipeline {
                     sh "ssh -o StrictHostKeyChecking=no $REMOTE_HOST 'docker ps -a'"
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            // Logout from Docker Hub
+            sh 'docker logout'
         }
     }
 }
