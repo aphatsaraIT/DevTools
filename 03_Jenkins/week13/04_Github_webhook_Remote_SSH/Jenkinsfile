@@ -22,7 +22,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                     // Build the Docker image
-                    
                     dir('./03_Jenkins/week13/04_Github_webhook_Remote_SSH') {
                        sh 'echo "Running in $(pwd)"'
                        sh 'echo start build the Docker image = $DOCKER_IMAGE'
